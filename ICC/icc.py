@@ -21,6 +21,14 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
     3. If the unit of analysis is a mean of several ratings, unit should be changed to '"average"'.
     In most cases, however, single values (unit='"single"') are regarded.
 
+    ICCs implemented:
+    - ICC(1,1) -> model='oneway', type='agreement', unit='single'
+    - ICC(2,1) -> model='twoway', type='agreement', unit='single'
+    - ICC(3,1) -> model='twoway', type='consistency', unit='single'
+    - ICC(1,k) -> model='oneway', type='agreement', unit='single'
+    - ICC(2,k) -> model='twoway', type='agreement', unit='single'
+    - ICC(3,k) -> model='twoway', type='consistency', unit='single'
+
     Parameters
     ----------
     ratings: array-like, shape (n_subjects, n_raters)
@@ -66,7 +74,20 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
         Fleiss, J.L. (1979), Intraclass correlation: uses in assessing rater reliability. Psychological
         Bulletin, 86, 420-428.
     """
+    ratings = np.asarray(ratings)
+
+    if (model, type, unit) not in {('oneway', 'agreement', 'single'),
+                                   # ('twoway', 'agreement', 'single'),
+                                   ('twoway', 'consistency', 'single'),
+                                   ('oneway', 'agreement', 'average'),
+                                   # ('twoway', 'agreement', 'average'),
+                                   ('twoway', 'consistency', 'average'),}:
+        raise ValueError('Using not implemented configuration.')
+
     n_subjects, n_raters = ratings.shape
+    if n_subjects < 1:
+        raise ValueError('Using one subject only. Add more subjects to calculate ICC.')
+
     SStotal = np.var(ratings, ddof=1) * (n_subjects * n_raters - 1)
     alpha = 1 - confidence_level
 
@@ -124,7 +145,7 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
                 a = (n_raters * coeff) / (n_subjects * (1 - coeff))
                 b = 1 + (n_raters * coeff * (n_subjects - 1)) / (n_subjects * (1 - coeff))
                 v = (a * MSc + b * MSe) ** 2 / (
-                            (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
+                        (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
                 df1 = n_subjects - 1
                 df2 = v
                 pvalue = 1 - f.cdf(Fvalue, df1, df2)
@@ -133,9 +154,9 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
                 FL = f.ppf(1 - alpha / 2, n_subjects - 1, v)
                 FU = f.ppf(1 - alpha / 2, v, n_subjects - 1)
                 lbound = (n_subjects * (MSr - FL * MSe)) / (FL * (
-                            n_raters * MSc + (n_raters * n_subjects - n_raters - n_subjects) * MSe) + n_subjects * MSr)
+                        n_raters * MSc + (n_raters * n_subjects - n_raters - n_subjects) * MSe) + n_subjects * MSr)
                 ubound = (n_subjects * (FU * MSr - MSe)) / (n_raters * MSc + (
-                            n_raters * n_subjects - n_raters - n_subjects) * MSe + n_subjects * FU * MSr)
+                        n_raters * n_subjects - n_raters - n_subjects) * MSe + n_subjects * FU * MSr)
 
     elif unit == 'average':
         if model == 'oneway':
@@ -181,7 +202,7 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
                 a = (n_raters * coeff) / (n_subjects * (1 - coeff))
                 b = 1 + (n_raters * coeff * (n_subjects - 1)) / (n_subjects * (1 - coeff))
                 v = (a * MSc + b * MSe) ** 2 / (
-                            (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
+                        (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
                 df1 = n_subjects - 1
                 df2 = v
                 pvalue = 1 - f.cdf(Fvalue, df1, df2)
