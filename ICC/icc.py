@@ -67,12 +67,12 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
         Bulletin, 86, 420-428.
     """
     n_subjects, n_raters = ratings.shape
-    SStotal = np.var(ratings) * (n_subjects * n_raters - 1)
+    SStotal = np.var(ratings, ddof=1) * (n_subjects * n_raters - 1)
     alpha = 1 - confidence_level
 
-    MSr = np.mean(ratings, axis=0) * n_raters
-    MSw = np.sum(np.var(ratings, axis=0) / n_subjects)
-    MSc = np.var(np.mean(ratings, axis=1)) * n_subjects
+    MSr = np.var(np.mean(ratings, axis=1), ddof=1) * n_raters
+    MSw = np.sum(np.var(ratings, axis=1, ddof=1) / n_subjects)
+    MSc = np.var(np.mean(ratings, axis=0), ddof=1) * n_subjects
     MSe = (SStotal - MSr * (n_subjects - 1) - MSc * (n_raters - 1)) / ((n_subjects - 1) * (n_raters - 1))
 
     # Single Score ICCs
@@ -123,8 +123,8 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
                 Fvalue = MSr / (a * MSc + b * MSe)
                 a = (n_raters * coeff) / (n_subjects * (1 - coeff))
                 b = 1 + (n_raters * coeff * (n_subjects - 1)) / (n_subjects * (1 - coeff))
-                v = (a * MSc + b * MSe) ^ 2 / (
-                            (a * MSc) ^ 2 / (n_raters - 1) + (b * MSe) ^ 2 / ((n_subjects - 1) * (n_raters - 1)))
+                v = (a * MSc + b * MSe) ** 2 / (
+                            (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
                 df1 = n_subjects - 1
                 df2 = v
                 pvalue = 1 - f.cdf(Fvalue, df1, df2)
@@ -180,8 +180,8 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
                 Fvalue = MSr / (a * MSc + b * MSe)
                 a = (n_raters * coeff) / (n_subjects * (1 - coeff))
                 b = 1 + (n_raters * coeff * (n_subjects - 1)) / (n_subjects * (1 - coeff))
-                v = (a * MSc + b * MSe) ^ 2 / (
-                            (a * MSc) ^ 2 / (n_raters - 1) + (b * MSe) ^ 2 / ((n_subjects - 1) * (n_raters - 1)))
+                v = (a * MSc + b * MSe) ** 2 / (
+                            (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
                 df1 = n_subjects - 1
                 df2 = v
                 pvalue = 1 - f.cdf(Fvalue, df1, df2)
