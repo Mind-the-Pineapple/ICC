@@ -25,9 +25,9 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
     - ICC(1,1) -> model='oneway', type='agreement', unit='single'
     - ICC(2,1) -> model='twoway', type='agreement', unit='single'
     - ICC(3,1) -> model='twoway', type='consistency', unit='single'
-    - ICC(1,k) -> model='oneway', type='agreement', unit='single'
-    - ICC(2,k) -> model='twoway', type='agreement', unit='single'
-    - ICC(3,k) -> model='twoway', type='consistency', unit='single'
+    - ICC(1,k) -> model='oneway', type='agreement', unit='average'
+    - ICC(2,k) -> model='twoway', type='agreement', unit='average'
+    - ICC(3,k) -> model='twoway', type='consistency', unit='average'
 
     Parameters
     ----------
