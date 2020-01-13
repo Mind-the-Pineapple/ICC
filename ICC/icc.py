@@ -7,19 +7,20 @@ import numpy as np
 from scipy.stats import f
 
 
-def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confidence_level=0.95):
+def icc(ratings, model='oneway', type='consistency', unit='single', confidence_level=0.95):
     """Implement Intraclass correlation coefficient (ICC) for oneway and twoway models.
 
     Computes single score or average score ICCs as an index of interrater reliability
     of quantitative data. Additionally, F-test and confidence interval are computed.
 
     When considering which form of ICC is appropriate for an actual set of data, one has
-    take several decisions (Shrout & Fleiss, 1979): 1. Should only the subjects be considered
-    as random effects ('"oneway"' model) or are subjects and raters randomly chosen from
-    a bigger pool of persons ('"twoway"' model). 2. If differences in judges' mean ratings
-    are of interest, interrater '"agreement"' instead of '"consistency"' should be computed.
-    3. If the unit of analysis is a mean of several ratings, unit should be changed to '"average"'.
-    In most cases, however, single values (unit='"single"') are regarded.
+    take several decisions (Shrout & Fleiss, 1979):
+     - 1. Should only the subjects be considered as random effects ('"oneway"' model)
+     or are subjects and raters randomly chosen from a bigger pool of persons ('"twoway"' model).
+     - 2. If differences in judges' mean ratings are of interest, interrater '"agreement"'
+      instead of '"consistency"' should be computed.
+     - 3. If the unit of analysis is a mean of several ratings, unit should be changed to
+     '"average"'. In most cases, however, single values (unit='"single"') are regarded.
 
     ICCs implemented:
     - ICC(1,1) -> model='oneway', type='agreement', unit='single'
@@ -43,9 +44,6 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
     unit: string, optional (default='single')
         String specifying the unit of analysis: Must be one of 'single' or
         'average'.
-    r0: float, optional (default=0.0)
-        Specification of the null hypothesis r = r0 (default=0.0).
-        Note that a one sided test (H1: r > r0) is performed.
     confidence_level: float, optional (default=0.95)
         Confidence level of the interval.
 
@@ -69,19 +67,21 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
     References
     ----------
         [1] - Bartko, J.J. (1966). The intraclass correlation coefficient as a measure of reliability.
-        Psychological Reports, 19, 3-11. McGraw, K.O., & Wong, S.P. (1996), Forming inferences about
-        some intraclass correlation coefficients. Psychological Methods, 1, 30-46. Shrout, P.E., &
-        Fleiss, J.L. (1979), Intraclass correlation: uses in assessing rater reliability. Psychological
-        Bulletin, 86, 420-428.
+        Psychological Reports, 19, 3-11.
+        [2] - McGraw, K.O., & Wong, S.P. (1996), Forming inferences about some intraclass correlation
+         coefficients. Psychological Methods, 1, 30-46.
+        [3] - Shrout, P.E., & Fleiss, J.L. (1979), Intraclass correlation: uses in assessing rater
+        reliability. Psychological Bulletin, 86, 420-428.
+        [4] -
     """
     ratings = np.asarray(ratings)
 
     if (model, type, unit) not in {('oneway', 'agreement', 'single'),
-                                   # ('twoway', 'agreement', 'single'),
+                                   ('twoway', 'agreement', 'single'),
                                    ('twoway', 'consistency', 'single'),
                                    ('oneway', 'agreement', 'average'),
-                                   # ('twoway', 'agreement', 'average'),
-                                   ('twoway', 'consistency', 'average'),}:
+                                   ('twoway', 'agreement', 'average'),
+                                   ('twoway', 'consistency', 'average'), }:
         raise ValueError('Using not implemented configuration.')
 
     n_subjects, n_raters = ratings.shape
@@ -99,118 +99,111 @@ def icc(ratings, model='oneway', type='consistency', unit='single', r0=0, confid
     # Single Score ICCs
     if unit == 'single':
         if model == 'oneway':
-            # Asendorpf & Wallbott, S. 245, ICu
-            # Bartko (1966), [3]
-            # icc.name < - "ICC(1)"
+            # ICC(1,1) One-Way Random, absolute
             coeff = (MSr - MSw) / (MSr + (n_raters - 1) * MSw)
-            Fvalue = MSr / MSw * ((1 - r0) / (1 + (n_raters - 1) * r0))
+            Fvalue = MSr / MSw
             df1 = n_subjects - 1
             df2 = n_subjects * (n_raters - 1)
             pvalue = 1 - f.cdf(Fvalue, df1, df2)
 
-            # confidence interval
-            FL = (MSr / MSw) / f.ppf(1 - alpha / 2, n_subjects - 1, n_subjects * (n_raters - 1))
-            FU = (MSr / MSw) * f.ppf(1 - alpha / 2, n_subjects * (n_raters - 1), n_subjects - 1)
+            # Confidence interval
+            FL = Fvalue / f.ppf(1 - alpha, df1, df2)
+            FU = Fvalue * f.ppf(1 - alpha, df2, df1)
             lbound = (FL - 1) / (FL + (n_raters - 1))
             ubound = (FU - 1) / (FU + (n_raters - 1))
 
         elif model == 'twoway':
-            if type == 'consistency':
-                # Asendorpf & Wallbott, S. 245, ICa
-                # Bartko (1966), [21]
-                # Shrout & Fleiss (1979), ICC(3,1)
-                # icc.name < - "ICC(C,1)"
-                coeff = (MSr - MSe) / (MSr + (n_raters - 1) * MSe)
-                Fvalue = MSr / MSe * ((1 - r0) / (1 + (n_raters - 1) * r0))
+            if type == 'agreement':
+                # ICC(2,1) Two-Way Random, absolute
+                coeff = (MSr - MSe) / (MSr + (n_raters - 1) * MSe + (n_raters / n_subjects) * (MSc - MSe))
+                Fvalue = MSr / MSe
                 df1 = n_subjects - 1
                 df2 = (n_subjects - 1) * (n_raters - 1)
                 pvalue = 1 - f.cdf(Fvalue, df1, df2)
 
-                # confidence interval
-                FL = (MSr / MSe) / f.ppf(1 - alpha / 2, n_subjects - 1, (n_subjects - 1) * (n_raters - 1))
-                FU = (MSr / MSe) * f.ppf(1 - alpha / 2, (n_subjects - 1) * (n_raters - 1), n_subjects - 1)
-                lbound = (FL - 1) / (FL + (n_raters - 1))
-                ubound = (FU - 1) / (FU + (n_raters - 1))
+                # Confidence interval
+                Fj = MSc / MSe
+                vn = (n_raters - 1) * (n_subjects - 1) * (
+                    (n_raters * coeff * Fj + n_subjects * (1 + (n_raters - 1) * coeff) - n_raters * coeff)) ** 2
+                vd = (n_subjects - 1) * n_raters ** 2 * coeff ** 2 * Fj ** 2 + (
+                        n_subjects * (1 + (n_raters - 1) * coeff) - n_raters * coeff) ** 2
+                v = vn / vd
 
-            elif type == 'agreement':
-                # Asendorpf & Wallbott, S. 246, ICa'
-                # Bartko (1966), [15]
-                # Shrout & Fleiss (1979), ICC(2,1)
-                # icc.name < - "ICC(A,1)"
-                coeff = (MSr - MSe) / (MSr + (n_raters - 1) * MSe + (n_raters / n_subjects) * (MSc - MSe))
-                a = (n_raters * r0) / (n_subjects * (1 - r0))
-                b = 1 + (n_raters * r0 * (n_subjects - 1)) / (n_subjects * (1 - r0))
-
-                Fvalue = MSr / (a * MSc + b * MSe)
-                a = (n_raters * coeff) / (n_subjects * (1 - coeff))
-                b = 1 + (n_raters * coeff * (n_subjects - 1)) / (n_subjects * (1 - coeff))
-                v = (a * MSc + b * MSe) ** 2 / (
-                        (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
-                df1 = n_subjects - 1
-                df2 = v
-                pvalue = 1 - f.cdf(Fvalue, df1, df2)
-
-                # confidence interval (McGraw & Wong, 1996)
-                FL = f.ppf(1 - alpha / 2, n_subjects - 1, v)
-                FU = f.ppf(1 - alpha / 2, v, n_subjects - 1)
+                FL = f.ppf(1 - alpha, n_subjects - 1, v)
+                FU = f.ppf(1 - alpha, v, n_subjects - 1)
                 lbound = (n_subjects * (MSr - FL * MSe)) / (FL * (
                         n_raters * MSc + (n_raters * n_subjects - n_raters - n_subjects) * MSe) + n_subjects * MSr)
                 ubound = (n_subjects * (FU * MSr - MSe)) / (n_raters * MSc + (
                         n_raters * n_subjects - n_raters - n_subjects) * MSe + n_subjects * FU * MSr)
 
-    elif unit == 'average':
-        if model == 'oneway':
-            # Asendorpf & Wallbott, S. 245, Ru
-            # icc.name < - paste("ICC(", n_raters, ")", sep="")
-
-            coeff = (MSr - MSw) / MSr
-            Fvalue = MSr / MSw * (1 - r0)
-            df1 = n_subjects - 1
-            df2 = n_subjects * (n_raters - 1)
-            pvalue = 1 - f.cdf(Fvalue, df1, df2)
-
-            # confidence interval
-            FL = (MSr / MSw) / f.ppf(1 - alpha / 2, n_subjects - 1, n_subjects * (n_raters - 1))
-            FU = (MSr / MSw) * f.ppf(1 - alpha / 2, n_subjects * (n_raters - 1), n_subjects - 1)
-            lbound = 1 - 1 / FL
-            ubound = 1 - 1 / FU
-
-        elif model == 'twoway':
-            if type == 'consistency':
-                # Asendorpf & Wallbott, S. 246, Ra
-                # icc.name < - paste("ICC(C,", n_raters, ")", sep="")
-
-                coeff = (MSr - MSe) / MSr
-                Fvalue = MSr / MSe * (1 - r0)
+            elif type == 'consistency':
+                # ICC(3,1) Two-Way Mixed, consistency
+                coeff = (MSr - MSe) / (MSr + (n_raters - 1) * MSe)
+                Fvalue = MSr / MSe
                 df1 = n_subjects - 1
                 df2 = (n_subjects - 1) * (n_raters - 1)
                 pvalue = 1 - f.cdf(Fvalue, df1, df2)
 
-                # confidence interval
-                FL = (MSr / MSe) / f.ppf(1 - alpha / 2, n_subjects - 1, (n_subjects - 1) * (n_raters - 1))
-                FU = (MSr / MSe) * f.ppf(1 - alpha / 2, (n_subjects - 1) * (n_raters - 1), n_subjects - 1)
-                lbound = 1 - 1 / FL
-                ubound = 1 - 1 / FU
+                # Confidence interval
+                FL = Fvalue / f.ppf(1 - alpha, df1, df2)
+                FU = Fvalue * f.ppf(1 - alpha, df2, df1)
+                lbound = (FL - 1) / (FL + (n_raters - 1))
+                ubound = (FU - 1) / (FU + (n_raters - 1))
 
-            elif type == 'agreement':
-                # icc.name <- paste("ICC(A,",n_raters,")",sep="")
+    elif unit == 'average':
+        if model == 'oneway':
+            # ICC(1,k) One-Way Random, absolute
+            coeff = (MSr - MSw) / MSr
+            Fvalue = MSr / MSw
+            df1 = n_subjects - 1
+            df2 = n_subjects * (n_raters - 1)
+            pvalue = 1 - f.cdf(Fvalue, df1, df2)
+
+            # Confidence interval
+            FL = (MSr / MSw) / f.ppf(1 - alpha, df1, df2)
+            FU = (MSr / MSw) * f.ppf(1 - alpha, df2, df1)
+            lbound = 1 - 1 / FL
+            ubound = 1 - 1 / FU
+
+        elif model == 'twoway':
+            if type == 'agreement':
+                # ICC(2,k) Two-Way Random, absolute
                 coeff = (MSr - MSe) / (MSr + (MSc - MSe) / n_subjects)
-                a = r0 / (n_subjects * (1 - r0))
-                b = 1 + (r0 * (n_subjects - 1)) / (n_subjects * (1 - r0))
-
-                Fvalue = MSr / (a * MSc + b * MSe)
-                a = (n_raters * coeff) / (n_subjects * (1 - coeff))
-                b = 1 + (n_raters * coeff * (n_subjects - 1)) / (n_subjects * (1 - coeff))
-                v = (a * MSc + b * MSe) ** 2 / (
-                        (a * MSc) ** 2 / (n_raters - 1) + (b * MSe) ** 2 / ((n_subjects - 1) * (n_raters - 1)))
+                Fvalue = MSr / MSe
                 df1 = n_subjects - 1
-                df2 = v
+                df2 = (n_subjects - 1) * (n_raters - 1)
                 pvalue = 1 - f.cdf(Fvalue, df1, df2)
 
-                # confidence interval (McGraw & Wong, 1996)
-                FL = f.ppf(1 - alpha / 2, n_subjects - 1, v)
-                FU = f.ppf(1 - alpha / 2, v, n_subjects - 1)
-                lbound = (n_subjects * (MSr - FL * MSe)) / (FL * (MSc - MSe) + n_subjects * MSr)
-                ubound = (n_subjects * (FU * MSr - MSe)) / (MSc - MSe + n_subjects * FU * MSr)
+                # Confidence interval
+                icc2 = (MSr - MSe) / (MSr + (n_raters - 1) * MSe + (n_raters / n_subjects) * (MSc - MSe))
+                Fj = MSc / MSe
+                vn = (n_raters - 1) * (n_subjects - 1) * (
+                    (n_raters * icc2 * Fj + n_subjects * (1 + (n_raters - 1) * icc2) - n_raters * icc2)) ** 2
+                vd = (n_subjects - 1) * n_raters ** 2 * icc2 ** 2 * Fj ** 2 + (
+                        n_subjects * (1 + (n_raters - 1) * icc2) - n_raters * icc2) ** 2
+                v = vn / vd
+
+                FL = f.ppf(1 - alpha, n_subjects - 1, v)
+                FU = f.ppf(1 - alpha, v, n_subjects - 1)
+                lb2 = (n_subjects * (MSr - FL * MSe)) / (FL * (
+                        n_raters * MSc + (n_raters * n_subjects - n_raters - n_subjects) * MSe) + n_subjects * MSr)
+                ub2 = (n_subjects * (FU * MSr - MSe)) / (n_raters * MSc + (
+                        n_raters * n_subjects - n_raters - n_subjects) * MSe + n_subjects * FU * MSr)
+                lbound = lb2 * n_raters / (1 + lb2 * (n_raters - 1))
+                ubound = ub2 * n_raters / (1 + ub2 * (n_raters - 1))
+
+            elif type == 'consistency':
+                # ICC(3,k) Two-Way Mixed, consistency
+                coeff = (MSr - MSe) / MSr
+                Fvalue = MSr / MSe
+                df1 = n_subjects - 1
+                df2 = (n_subjects - 1) * (n_raters - 1)
+                pvalue = 1 - f.cdf(Fvalue, df1, df2)
+
+                # Confidence interval
+                FL = Fvalue / f.ppf(1 - alpha, df1, df2)
+                FU = Fvalue * f.ppf(1 - alpha, df2, df1)
+                lbound = 1 - 1 / FL
+                ubound = 1 - 1 / FU
 
     return coeff, Fvalue, df1, df2, pvalue, lbound, ubound
