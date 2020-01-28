@@ -1,0 +1,18 @@
+dist: xenial
+sudo: false
+
+language: python
+python:
+  - 3.7
+all_branches: true
+before_install:
+  - python --version
+  - pip install -U pip
+  - pip install -U pytest
+  - pip install codecov
+script:
+    - cd ICC/tests/
+      - python icc_tests.py
+
+after_success:
+  - codecov # submit coverage
