@@ -11,7 +11,7 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / 'README.md').read_text()
 
 # get __version__ from _version.py
-ver_file = os.path.join('icc', '_version.py')
+ver_file = os.path.join('ICC', '_version.py')
 with open(ver_file) as f:
     exec(f.read())
 
