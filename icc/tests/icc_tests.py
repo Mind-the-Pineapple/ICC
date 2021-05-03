@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from pytest import approx
 
-from ICC import icc
+from icc import icc
 
 
 def test_not_implemented_config():
